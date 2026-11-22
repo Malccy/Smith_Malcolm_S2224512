@@ -72,6 +72,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     private ArrayList<Situation> shownSituations = new ArrayList<Situation>();
     private String searchRoad = "";
 
+    private EditText etDistance;
+    private Button nearButton;
+    private float searchKm = 0;
+    private final float campusLatitude = 55.8673f;
+    private final float campusLongitude = -4.2504f;
+
+    private final float kmPerDegreeLatitude = 111.2f;
+    private final float kmPerDegreeLongitude = 62.0f;
+
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     private String clientId = "";
     private String clientKey = "";
@@ -94,6 +103,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     private static ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler uiHandler = new Handler(Looper.getMainLooper());
     private boolean stopped = false;
+
+    private final long refreshIntervalMillis = 3600000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -119,6 +130,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         searchButton.setOnClickListener(this);
         showAllButton.setOnClickListener(this);
 
+        etDistance = (EditText)findViewById(R.id.etDistance);
+        nearButton = (Button)findViewById(R.id.nearButton);
+        nearButton.setOnClickListener(this);
+
         try
         {
             Bundle metaData = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA).metaData;
@@ -133,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         }
 
         startProgress();
+        uiHandler.postDelayed(new RefreshTask(), refreshIntervalMillis);
     }
 
     @Override
@@ -153,11 +169,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             String typed = etRoad.getText().toString().trim();
             if (typed.equals(""))
             {
-                Toast.makeText(this, "Please enter a road name, e.g. A83", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Please enter a road name, e.g. M8", Toast.LENGTH_LONG).show();
             }
             else
             {
                 searchRoad = typed;
+                searchKm = 0;
+                etDistance.setText("");
                 applyFilter();
                 if (shownSituations.size() == 0)
                 {
@@ -165,10 +183,47 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                 }
             }
         }
+        else if (aview == nearButton)
+        {
+            String typedKm = etDistance.getText().toString();
+            if (typedKm.equals(""))
+            {
+                Toast.makeText(this, "Please enter a distance in km, e.g. 10", Toast.LENGTH_LONG).show();
+            }
+            else
+            {
+                try
+                {
+                    float km = Float.parseFloat(typedKm);
+                    if (km > 0)
+                    {
+                        searchKm = km;
+                        searchRoad = "";
+                        etRoad.setText("");
+                        applyFilter();
+                        if (shownSituations.size() == 0)
+                        {
+                            Toast.makeText(this, "No situations within " + String.valueOf(searchKm) + " km", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                    else
+                    {
+                        Toast.makeText(this, "The distance must be more than 0", Toast.LENGTH_LONG).show();
+                    }
+                }
+                catch (NumberFormatException e)
+                {
+                    Log.e("MyTag", "Distance is not a number: " + typedKm);
+                    Toast.makeText(this, "Please enter the distance as a number, e.g. 10", Toast.LENGTH_LONG).show();
+                }
+            }
+        }
         else if (aview == showAllButton)
         {
             searchRoad = "";
+            searchKm = 0;
             etRoad.setText("");
+            etDistance.setText("");
             applyFilter();
         }
     }
@@ -180,6 +235,20 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         tvStatus.setText("Downloading traffic data...");
         executor.execute(new Task(unplannedEventsURL, Situation.TYPE_UNPLANNED, unplannedSavedFile));
         executor.execute(new Task(roadworksURL, Situation.TYPE_ROADWORKS, roadworksSavedFile));
+    }
+
+    private class RefreshTask implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            if (!stopped)
+            {
+                Log.d("MyTag", "Auto-update: refreshing the data");
+                startProgress();
+                uiHandler.postDelayed(new RefreshTask(), refreshIntervalMillis);
+            }
+        }
     }
 
     private class Task implements Runnable
@@ -303,11 +372,11 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         shownSituations = new ArrayList<Situation>();
         for (Situation s : allSituations)
         {
-            if (searchRoad.equals(""))
+            if (searchRoad.equals("") && searchKm == 0)
             {
                 shownSituations.add(s);
             }
-            else
+            else if (!searchRoad.equals(""))
             {
                 boolean found = false;
                 for (String road : s.getRoads())
@@ -316,22 +385,70 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                     {
                         found = true;
                     }
+                    else if (road.length() > searchRoad.length())
+                    {
+                        String start = road.substring(0, searchRoad.length());
+                        String next = road.substring(searchRoad.length(), searchRoad.length() + 1);
+                        if (start.equalsIgnoreCase(searchRoad) && next.equals("("))
+                        {
+                            found = true;
+                        }
+                    }
                 }
                 if (found)
                 {
                     shownSituations.add(s);
                 }
             }
+            else
+            {
+                if (isNear(s))
+                {
+                    shownSituations.add(s);
+                }
+            }
         }
         showList();
-        if (searchRoad.equals(""))
-        {
-            tvSearchInfo.setText("Showing all " + String.valueOf(shownSituations.size()) + " situations");
-        }
-        else
+        if (!searchRoad.equals(""))
         {
             tvSearchInfo.setText("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
         }
+        else if (searchKm != 0)
+        {
+            tvSearchInfo.setText("Within " + String.valueOf(searchKm) + " km of GCU: " + String.valueOf(shownSituations.size()) + " found");
+        }
+        else
+        {
+            tvSearchInfo.setText("Showing all " + String.valueOf(shownSituations.size()) + " situations");
+        }
+    }
+
+    private boolean isNear(Situation s)
+    {
+        float limit = searchKm * searchKm;
+        boolean near = false;
+        if (s.hasFromPoint())
+        {
+            if (distanceSquared(s.getFromLatitude(), s.getFromLongitude()) <= limit)
+            {
+                near = true;
+            }
+        }
+        if (s.hasToPoint())
+        {
+            if (distanceSquared(s.getToLatitude(), s.getToLongitude()) <= limit)
+            {
+                near = true;
+            }
+        }
+        return near;
+    }
+
+    private float distanceSquared(float latitude, float longitude)
+    {
+        float northSouth = (latitude - campusLatitude) * kmPerDegreeLatitude;
+        float eastWest = (longitude - campusLongitude) * kmPerDegreeLongitude;
+        return northSouth * northSouth + eastWest * eastWest;
     }
 
     private void showList()
