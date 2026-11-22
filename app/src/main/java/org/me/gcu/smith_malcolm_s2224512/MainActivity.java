@@ -54,11 +54,23 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.AdapterView;
 
+//search
+import android.widget.EditText;
+import android.widget.Toast;
+
 public class MainActivity extends AppCompatActivity implements OnClickListener, AdapterView.OnItemClickListener
 {
     private TextView tvStatus;
     private Button startButton;
     private ListView listView;
+
+    //Search
+    private EditText etRoad;
+    private Button searchButton;
+    private Button showAllButton;
+    private TextView tvSearchInfo;
+    private ArrayList<Situation> shownSituations = new ArrayList<Situation>();
+    private String searchRoad = "";
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     private String clientId = "";
@@ -100,6 +112,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         listView = (ListView)findViewById(R.id.list);
         listView.setOnItemClickListener(this);
 
+        etRoad = (EditText)findViewById(R.id.etRoad);
+        searchButton = (Button)findViewById(R.id.searchButton);
+        showAllButton = (Button)findViewById(R.id.showAllButton);
+        tvSearchInfo = (TextView)findViewById(R.id.tvSearchInfo);
+        searchButton.setOnClickListener(this);
+        showAllButton.setOnClickListener(this);
+
         try
         {
             Bundle metaData = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA).metaData;
@@ -125,7 +144,33 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
 
     public void onClick(View aview)
     {
-        startProgress();
+        if (aview == startButton)
+        {
+            startProgress();
+        }
+        else if (aview == searchButton)
+        {
+            String typed = etRoad.getText().toString().trim();
+            if (typed.equals(""))
+            {
+                Toast.makeText(this, "Please enter a road name, e.g. A83", Toast.LENGTH_LONG).show();
+            }
+            else
+            {
+                searchRoad = typed;
+                applyFilter();
+                if (shownSituations.size() == 0)
+                {
+                    Toast.makeText(this, "No situations found on " + searchRoad, Toast.LENGTH_LONG).show();
+                }
+            }
+        }
+        else if (aview == showAllButton)
+        {
+            searchRoad = "";
+            etRoad.setText("");
+            applyFilter();
+        }
     }
 
     public void startProgress()
@@ -235,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         {
             allSituations.add(r);
         }
-        showList();
+        applyFilter();
 
         String unplannedText = "...";
         String roadworksText = "...";
@@ -253,14 +298,49 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         tvStatus.setText(status);
     }
 
+    private void applyFilter()
+    {
+        shownSituations = new ArrayList<Situation>();
+        for (Situation s : allSituations)
+        {
+            if (searchRoad.equals(""))
+            {
+                shownSituations.add(s);
+            }
+            else
+            {
+                boolean found = false;
+                for (String road : s.getRoads())
+                {
+                    if (road.equalsIgnoreCase(searchRoad))
+                    {
+                        found = true;
+                    }
+                }
+                if (found)
+                {
+                    shownSituations.add(s);
+                }
+            }
+        }
+        showList();
+        if (searchRoad.equals(""))
+        {
+            tvSearchInfo.setText("Showing all " + String.valueOf(shownSituations.size()) + " situations");
+        }
+        else
+        {
+            tvSearchInfo.setText("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
+        }
+    }
 
     private void showList()
     {
-        String[] values = new String[allSituations.size()];
-        int[] icons = new int[allSituations.size()];
-        int[] colours = new int[allSituations.size()];
+        String[] values = new String[shownSituations.size()];
+        int[] icons = new int[shownSituations.size()];
+        int[] colours = new int[shownSituations.size()];
         int i = 0;
-        for (Situation s : allSituations)
+        for (Situation s : shownSituations)
         {
             if (s.getFeedType() == Situation.TYPE_ROADWORKS)
             {
@@ -304,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     {
         Situation selected = null;
         int i = 0;
-        for (Situation s : allSituations)
+        for (Situation s : shownSituations)
         {
             if (i == position)
             {
