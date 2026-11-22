@@ -49,7 +49,12 @@ import java.util.Base64;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity implements OnClickListener
+//Dialog pop-up imports
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.widget.AdapterView;
+
+public class MainActivity extends AppCompatActivity implements OnClickListener, AdapterView.OnItemClickListener
 {
     private TextView tvStatus;
     private Button startButton;
@@ -93,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
         listView = (ListView)findViewById(R.id.list);
+        listView.setOnItemClickListener(this);
 
         try
         {
@@ -247,9 +253,12 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
         tvStatus.setText(status);
     }
 
+
     private void showList()
     {
         String[] values = new String[allSituations.size()];
+        int[] icons = new int[allSituations.size()];
+        int[] colours = new int[allSituations.size()];
         int i = 0;
         for (Situation s : allSituations)
         {
@@ -261,10 +270,175 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
             {
                 values[i] = "Incident (" + s.getSubType() + "): " + s.getComment();
             }
+            icons[i] = R.mipmap.ic_launcher;
+            colours[i] = getDelayColour(s);
             i++;
         }
-        ArrayAdapter adapter = new ArrayAdapter<String>(this, R.layout.activity_listview, values);
-        listView.setAdapter(adapter);
+        CustomAdapter customAdapter = new CustomAdapter(getApplicationContext(), values, icons, colours);
+        listView.setAdapter(customAdapter);
+    }
+
+    private int getDelayColour(Situation s)
+    {
+        int colour = getResources().getColor(R.color.white);
+        if (s.getFeedType() == Situation.TYPE_ROADWORKS)
+        {
+            if (s.getDelaysType().equals("delays"))
+            {
+                colour = getResources().getColor(android.R.color.holo_orange_light);
+            }
+            else if (s.getDelaysType().equals("longDelays"))
+            {
+                colour = getResources().getColor(android.R.color.holo_orange_dark);
+            }
+            else if (s.getDelaysType().equals("veryLongDelays"))
+            {
+                colour = getResources().getColor(android.R.color.holo_red_light);
+            }
+        }
+        return colour;
+    }
+
+    // Called when a row is tapped
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+    {
+        Situation selected = null;
+        int i = 0;
+        for (Situation s : allSituations)
+        {
+            if (i == position)
+            {
+                selected = s;
+            }
+            i++;
+        }
+        if (selected != null)
+        {
+            showDetailDialog(selected);
+        }
+    }
+
+    private void showDetailDialog(Situation s)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        if (s.getFeedType() == Situation.TYPE_ROADWORKS)
+        {
+            builder.setTitle("Roadworks");
+        }
+        else
+        {
+            builder.setTitle("Incident");
+        }
+        builder.setMessage(buildDetailText(s));
+        builder.setCancelable(false);
+        builder.setPositiveButton("Close", closeButtonListener);
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    private DialogInterface.OnClickListener closeButtonListener = new DialogInterface.OnClickListener ()
+    {
+        public void onClick(DialogInterface dialog, int id)
+        {
+            dialog.cancel();
+        }
+    };
+
+    private String buildDetailText(Situation s)
+    {
+        String text = s.getComment() + "\n\n";
+
+        if (s.getFeedType() == Situation.TYPE_ROADWORKS)
+        {
+            text = text + "Type: Roadworks\n";
+        }
+        else
+        {
+            text = text + "Type: Incident\n";
+        }
+        if (!s.getSubType().equals(""))
+        {
+            text = text + "Kind: " + s.getSubType() + "\n";
+        }
+        if (!s.getDelaysType().equals(""))
+        {
+            text = text + "Delays: " + s.getDelaysType() + "\n";
+        }
+        if (s.isUrgentRoadworks())
+        {
+            text = text + "Urgent roadworks: yes\n";
+        }
+        if (s.getOperationalLanes() >= 0)
+        {
+            text = text + "Lanes open: " + String.valueOf(s.getOperationalLanes()) + "\n";
+        }
+        if (s.getLanesRestricted() >= 0)
+        {
+            text = text + "Lanes restricted: " + String.valueOf(s.getLanesRestricted()) + "\n";
+        }
+        if (!s.getDirection().equals(""))
+        {
+            text = text + "Direction: " + s.getDirection() + "\n";
+        }
+        if (!s.getProbability().equals(""))
+        {
+            text = text + "Probability: " + s.getProbability() + "\n";
+        }
+
+        text = text + "\n";
+        if (!s.getStartTime().equals(""))
+        {
+            text = text + "Starts: " + tidyTime(s.getStartTime()) + "\n";
+        }
+        if (!s.getEndTime().equals(""))
+        {
+            text = text + "Ends: " + tidyTime(s.getEndTime()) + "\n";
+        }
+        if (!s.getVersionTime().equals(""))
+        {
+            text = text + "Last updated: " + tidyTime(s.getVersionTime()) + "\n";
+        }
+
+        text = text + "\n";
+        String roadText = "";
+        for (String road : s.getRoads())
+        {
+            if (!roadText.equals(""))
+            {
+                roadText = roadText + ", ";
+            }
+            roadText = roadText + road;
+        }
+        if (!roadText.equals(""))
+        {
+            text = text + "Road: " + roadText + "\n";
+        }
+        if (!s.getFromDescription().equals(""))
+        {
+            text = text + "From: " + s.getFromDescription() + "\n";
+        }
+        if (!s.getToDescription().equals(""))
+        {
+            text = text + "To: " + s.getToDescription() + "\n";
+        }
+        if (s.hasFromPoint())
+        {
+            text = text + "From point: " + String.valueOf(s.getFromLatitude()) + ", " + String.valueOf(s.getFromLongitude()) + "\n";
+        }
+        if (s.hasToPoint())
+        {
+            text = text + "To point: " + String.valueOf(s.getToLatitude()) + ", " + String.valueOf(s.getToLongitude()) + "\n";
+        }
+        return text;
+    }
+    //Time formatting from 2026-08-31T11:30:00+01:00 to 2026-08-31 11:30
+    private String tidyTime(String t)
+    {
+        if (t.length() >= 16)
+        {
+            return t.substring(0, 10) + " " + t.substring(11, 16);
+        }
+        return t;
     }
 
     // ------------------------------saved copy------------------------------------
