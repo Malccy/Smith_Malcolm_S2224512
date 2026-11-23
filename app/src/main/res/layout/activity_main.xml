@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MPD XML Starter code layout, with the list added -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/main"
     android:layout_width="match_parent"
@@ -19,54 +18,13 @@
         android:textSize="16sp"
         android:text="Traffic Scotland" />
 
-    <EditText
-        android:id="@+id/etRoad"
+    <FrameLayout
+        android:id="@+id/searchHolder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Road name, e.g. A83"
-        android:inputType="text" />
+        android:layout_height="wrap_content" />
 
-    <EditText
-        android:id="@+id/etDistance"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Distance in km from GCU, e.g. 10"
-        android:inputType="numberDecimal" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-    <Button
-        android:id="@+id/searchButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Search road" />
-
-    <Button
-        android:id="@+id/nearButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Near GCU" />
-
-    <Button
-        android:id="@+id/showAllButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Show all" />
-
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvSearchInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:text="Showing all situations" />
-
-    <ListView
-        android:id="@+id/list"
+    <FrameLayout
+        android:id="@+id/listHolder"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />

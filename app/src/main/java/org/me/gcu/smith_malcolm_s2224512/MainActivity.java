@@ -58,22 +58,21 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity implements OnClickListener, AdapterView.OnItemClickListener
-{
+//fragments
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+
+public class MainActivity extends AppCompatActivity implements OnClickListener, SearchFragment.SearchFragmentListener, SituationListFragment.SituationListListener{
     private TextView tvStatus;
     private Button startButton;
-    private ListView listView;
+    private SearchFragment searchFragment;
+    private SituationListFragment listFragment;
 
     //Search
-    private EditText etRoad;
-    private Button searchButton;
-    private Button showAllButton;
-    private TextView tvSearchInfo;
     private ArrayList<Situation> shownSituations = new ArrayList<Situation>();
     private String searchRoad = "";
 
-    private EditText etDistance;
-    private Button nearButton;
+    //radius
     private float searchKm = 0;
     private final float campusLatitude = 55.8673f;
     private final float campusLongitude = -4.2504f;
@@ -120,19 +119,14 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         tvStatus = (TextView)findViewById(R.id.tvStatus);
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
-        listView = (ListView)findViewById(R.id.list);
-        listView.setOnItemClickListener(this);
 
-        etRoad = (EditText)findViewById(R.id.etRoad);
-        searchButton = (Button)findViewById(R.id.searchButton);
-        showAllButton = (Button)findViewById(R.id.showAllButton);
-        tvSearchInfo = (TextView)findViewById(R.id.tvSearchInfo);
-        searchButton.setOnClickListener(this);
-        showAllButton.setOnClickListener(this);
-
-        etDistance = (EditText)findViewById(R.id.etDistance);
-        nearButton = (Button)findViewById(R.id.nearButton);
-        nearButton.setOnClickListener(this);
+        searchFragment = new SearchFragment();
+        listFragment = new SituationListFragment();
+        FragmentManager manager = getSupportFragmentManager();
+        FragmentTransaction transaction = manager.beginTransaction();
+        transaction.replace(R.id.searchHolder, searchFragment);
+        transaction.replace(R.id.listHolder, listFragment);
+        transaction.commit();
 
         try
         {
@@ -157,75 +151,80 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         super.onDestroy();
         stopped = true;
     }
-
     public void onClick(View aview)
     {
         if (aview == startButton)
         {
             startProgress();
         }
-        else if (aview == searchButton)
+    }
+
+
+    @Override
+    public void onRoadSearch(String typedRoad)
+    {
+        String typed = typedRoad.trim();
+        if (typed.equals(""))
         {
-            String typed = etRoad.getText().toString().trim();
-            if (typed.equals(""))
-            {
-                Toast.makeText(this, "Please enter a road name, e.g. M8", Toast.LENGTH_LONG).show();
-            }
-            else
-            {
-                searchRoad = typed;
-                searchKm = 0;
-                etDistance.setText("");
-                applyFilter();
-                if (shownSituations.size() == 0)
-                {
-                    Toast.makeText(this, "No situations found on " + searchRoad, Toast.LENGTH_LONG).show();
-                }
-            }
+            Toast.makeText(this, "Please enter a road name, e.g. A83", Toast.LENGTH_LONG).show();
         }
-        else if (aview == nearButton)
+        else
         {
-            String typedKm = etDistance.getText().toString();
-            if (typedKm.equals(""))
-            {
-                Toast.makeText(this, "Please enter a distance in km, e.g. 10", Toast.LENGTH_LONG).show();
-            }
-            else
-            {
-                try
-                {
-                    float km = Float.parseFloat(typedKm);
-                    if (km > 0)
-                    {
-                        searchKm = km;
-                        searchRoad = "";
-                        etRoad.setText("");
-                        applyFilter();
-                        if (shownSituations.size() == 0)
-                        {
-                            Toast.makeText(this, "No situations within " + String.valueOf(searchKm) + " km", Toast.LENGTH_LONG).show();
-                        }
-                    }
-                    else
-                    {
-                        Toast.makeText(this, "The distance must be more than 0", Toast.LENGTH_LONG).show();
-                    }
-                }
-                catch (NumberFormatException e)
-                {
-                    Log.e("MyTag", "Distance is not a number: " + typedKm);
-                    Toast.makeText(this, "Please enter the distance as a number, e.g. 10", Toast.LENGTH_LONG).show();
-                }
-            }
-        }
-        else if (aview == showAllButton)
-        {
-            searchRoad = "";
+            searchRoad = typed;
             searchKm = 0;
-            etRoad.setText("");
-            etDistance.setText("");
+            searchFragment.clearDistanceBox();
             applyFilter();
+            if (shownSituations.size() == 0)
+            {
+                Toast.makeText(this, "No situations found on " + searchRoad, Toast.LENGTH_LONG).show();
+            }
         }
+    }
+
+    @Override
+    public void onDistanceSearch(String typedKm)
+    {
+        if (typedKm.equals(""))
+        {
+            Toast.makeText(this, "Please enter a distance in km, e.g. 10", Toast.LENGTH_LONG).show();
+        }
+        else
+        {
+            try
+            {
+                float km = Float.parseFloat(typedKm);
+                if (km > 0)
+                {
+                    searchKm = km;
+                    searchRoad = "";
+                    searchFragment.clearRoadBox();
+                    applyFilter();
+                    if (shownSituations.size() == 0)
+                    {
+                        Toast.makeText(this, "No situations within " + String.valueOf(searchKm) + " km", Toast.LENGTH_LONG).show();
+                    }
+                }
+                else
+                {
+                    Toast.makeText(this, "The distance must be more than 0", Toast.LENGTH_LONG).show();
+                }
+            }
+            catch (NumberFormatException e)
+            {
+                Log.e("MyTag", "Distance is not a number: " + typedKm);
+                Toast.makeText(this, "Please enter the distance as a number, e.g. 10", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    public void onShowAll()
+    {
+        searchRoad = "";
+        searchKm = 0;
+        searchFragment.clearRoadBox();
+        searchFragment.clearDistanceBox();
+        applyFilter();
     }
 
     public void startProgress()
@@ -411,15 +410,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         showList();
         if (!searchRoad.equals(""))
         {
-            tvSearchInfo.setText("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
+            searchFragment.setInfo("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
         }
         else if (searchKm != 0)
         {
-            tvSearchInfo.setText("Within " + String.valueOf(searchKm) + " km of GCU: " + String.valueOf(shownSituations.size()) + " found");
+            searchFragment.setInfo("Within " + String.valueOf(searchKm) + " km of GCU: " + String.valueOf(shownSituations.size()) + " found");
         }
         else
         {
-            tvSearchInfo.setText("Showing all " + String.valueOf(shownSituations.size()) + " situations");
+            searchFragment.setInfo("Showing all " + String.valueOf(shownSituations.size()) + " situations");
         }
     }
 
@@ -471,8 +470,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             colours[i] = getDelayColour(s);
             i++;
         }
-        CustomAdapter customAdapter = new CustomAdapter(getApplicationContext(), values, icons, colours);
-        listView.setAdapter(customAdapter);
+        listFragment.setRows(values, icons, colours);
     }
 
     private int getDelayColour(Situation s)
@@ -497,7 +495,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     }
 
     // Called when a row is tapped
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+    @Override
+    public void onSituationSelected(int position)
     {
         Situation selected = null;
         int i = 0;
