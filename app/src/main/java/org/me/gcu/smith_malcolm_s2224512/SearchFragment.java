@@ -29,6 +29,10 @@ public class SearchFragment extends Fragment implements View.OnClickListener
     private Button showAllButton;
     private TextView tvSearchInfo;
 
+    private String roadText = "";
+    private String distanceText = "";
+    private String infoText = null;
+
     public SearchFragment() {}
 
     @Override
@@ -58,6 +62,13 @@ public class SearchFragment extends Fragment implements View.OnClickListener
         searchButton.setOnClickListener(this);
         nearButton.setOnClickListener(this);
         showAllButton.setOnClickListener(this);
+
+        etRoad.setText(roadText);
+        etDistance.setText(distanceText);
+        if (infoText != null)
+        {
+            tvSearchInfo.setText(infoText);
+        }
         return v;
     }
 
@@ -79,6 +90,7 @@ public class SearchFragment extends Fragment implements View.OnClickListener
 
     public void clearRoadBox()
     {
+        roadText = "";
         if (etRoad != null)
         {
             etRoad.setText("");
@@ -87,14 +99,34 @@ public class SearchFragment extends Fragment implements View.OnClickListener
 
     public void clearDistanceBox()
     {
+        distanceText = "";
         if (etDistance != null)
         {
             etDistance.setText("");
         }
     }
 
+    public void setRoadText(String text)
+    {
+        roadText = text;
+        if (etRoad != null)
+        {
+            etRoad.setText(text);
+        }
+    }
+
+    public void setDistanceText(String text)
+    {
+        distanceText = text;
+        if (etDistance != null)
+        {
+            etDistance.setText(text);
+        }
+    }
+
     public void setInfo(String text)
     {
+        infoText = text;
         if (tvSearchInfo != null)
         {
             tvSearchInfo.setText(text);

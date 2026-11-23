@@ -62,6 +62,8 @@ import android.widget.Toast;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import androidx.lifecycle.ViewModelProvider;
+
 public class MainActivity extends AppCompatActivity implements OnClickListener, SearchFragment.SearchFragmentListener, SituationListFragment.SituationListListener{
     private TextView tvStatus;
     private Button startButton;
@@ -88,15 +90,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     final String unplannedSavedFile = "unplanned_saved.xml";
     final String roadworksSavedFile = "roadworks_saved.xml";
 
-    // Parsed data
-    private ArrayList<Situation> unplannedList = new ArrayList<Situation>();
-    private ArrayList<Situation> roadworksList = new ArrayList<Situation>();
-    private ArrayList<Situation> allSituations = new ArrayList<Situation>();
-    private boolean unplannedLoaded = false;
-    private boolean roadworksLoaded = false;
-    private boolean unplannedOffline = false;
-    private boolean roadworksOffline = false;
-
     private ArrayList<Situation> parsedList;
 
     private static ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -104,6 +97,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     private boolean stopped = false;
 
     private final long refreshIntervalMillis = 3600000;
+
+    private TrafficViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -128,6 +123,19 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         transaction.replace(R.id.listHolder, listFragment);
         transaction.commit();
 
+        ViewModelProvider provider = new ViewModelProvider(this);
+        viewModel = provider.get(TrafficViewModel.class);
+
+        searchRoad = viewModel.getSearchRoad();
+        searchKm = viewModel.getSearchKm();
+        searchFragment.setRoadText(searchRoad);
+        searchFragment.setDistanceText(viewModel.getSearchKmText());
+
+        viewModel.getObservedStatus().observe(this, status -> {
+            tvStatus.setText(status);
+            applyFilter();
+        });
+
         try
         {
             Bundle metaData = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA).metaData;
@@ -141,7 +149,11 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             Log.e("MyTag", "Could not read the keys: " + e.toString());
         }
 
-        startProgress();
+        if (!viewModel.isStarted())
+        {
+            viewModel.setStarted(true);
+            startProgress();
+        }
         uiHandler.postDelayed(new RefreshTask(), refreshIntervalMillis);
     }
 
@@ -173,6 +185,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             searchRoad = typed;
             searchKm = 0;
             searchFragment.clearDistanceBox();
+            viewModel.setSearch(searchRoad, searchKm, "");
             applyFilter();
             if (shownSituations.size() == 0)
             {
@@ -198,6 +211,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                     searchKm = km;
                     searchRoad = "";
                     searchFragment.clearRoadBox();
+                    viewModel.setSearch(searchRoad, searchKm, typedKm);
                     applyFilter();
                     if (shownSituations.size() == 0)
                     {
@@ -224,13 +238,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         searchKm = 0;
         searchFragment.clearRoadBox();
         searchFragment.clearDistanceBox();
+        viewModel.setSearch("", 0, "");
         applyFilter();
     }
 
     public void startProgress()
     {
-        unplannedLoaded = false;
-        roadworksLoaded = false;
+        viewModel.startLoading();
         tvStatus.setText("Downloading traffic data...");
         executor.execute(new Task(unplannedEventsURL, Situation.TYPE_UNPLANNED, unplannedSavedFile));
         executor.execute(new Task(roadworksURL, Situation.TYPE_ROADWORKS, roadworksSavedFile));
@@ -318,58 +332,17 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                 @Override
                 public void run()
                 {
-                    if (!stopped) { showResult(myFeedType, finished, wasOffline); }
+                    viewModel.setResult(myFeedType, finished, wasOffline);
                 }
             });
         }
 
     }
 
-    private void showResult(int feedType, ArrayList<Situation> list, boolean offline)
-    {
-        if (feedType == Situation.TYPE_UNPLANNED)
-        {
-            unplannedList = list;
-            unplannedLoaded = true;
-            unplannedOffline = offline;
-        }
-        else
-        {
-            roadworksList = list;
-            roadworksLoaded = true;
-            roadworksOffline = offline;
-        }
-        allSituations = new ArrayList<Situation>();
-        for (Situation u : unplannedList)
-        {
-            allSituations.add(u);
-        }
-        for (Situation r : roadworksList)
-        {
-            allSituations.add(r);
-        }
-        applyFilter();
-
-        String unplannedText = "...";
-        String roadworksText = "...";
-        if (unplannedLoaded) { unplannedText = String.valueOf(unplannedList.size()); }
-        if (roadworksLoaded) { roadworksText = String.valueOf(roadworksList.size()); }
-        String status = "Incidents: " + unplannedText + "   Roadworks: " + roadworksText;
-        if (unplannedOffline || roadworksOffline)
-        {
-            status = status + "   (OFFLINE - saved copy used)";
-        }
-        if (unplannedLoaded && roadworksLoaded && allSituations.size() == 0)
-        {
-            status = "No data: could not download it and there is no saved copy.";
-        }
-        tvStatus.setText(status);
-    }
-
     private void applyFilter()
     {
         shownSituations = new ArrayList<Situation>();
-        for (Situation s : allSituations)
+        for (Situation s : viewModel.getAllSituations())
         {
             if (searchRoad.equals("") && searchKm == 0)
             {
@@ -466,11 +439,40 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             {
                 values[i] = "Incident (" + s.getSubType() + "): " + s.getComment();
             }
-            icons[i] = R.mipmap.ic_launcher;
+            icons[i] = getIcon(s);
             colours[i] = getDelayColour(s);
             i++;
         }
         listFragment.setRows(values, icons, colours);
+    }
+
+    private int getIcon(Situation s)
+    {
+        int icon = R.drawable.ic_incident_other;
+        if (s.getFeedType() == Situation.TYPE_ROADWORKS)
+        {
+            icon = R.drawable.ic_roadworks;
+            if (s.getDelaysType().equals("delays"))
+            {
+                icon = R.drawable.ic_roadworks_delays;
+            }
+            else if (s.getDelaysType().equals("longDelays") || s.getDelaysType().equals("veryLongDelays"))
+            {
+                icon = R.drawable.ic_roadworks_long;
+            }
+        }
+        else
+        {
+            if (s.getSubType().equals("roadClosed"))
+            {
+                icon = R.drawable.ic_incident_closed;
+            }
+            else if (s.getSubType().equals("queuingTraffic"))
+            {
+                icon = R.drawable.ic_incident_queuing;
+            }
+        }
+        return icon;
     }
 
     private int getDelayColour(Situation s)
