@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     private Handler uiHandler = new Handler(Looper.getMainLooper());
     private boolean stopped = false;
 
-    private final long refreshIntervalMillis = 360000;
+    private final long refreshIntervalMillis = 3600000;
 
     private TrafficViewModel viewModel;
     private Button mapButton;
@@ -416,6 +416,20 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             {
                 parseData(result, myFeedType);
             }
+
+            int xmlCount = 0;
+            int pos = result.indexOf("<situation ");
+            while (pos >= 0)
+            {
+                xmlCount++;
+                pos = result.indexOf("<situation ", pos + 1);
+            }
+            String feedName = "Roadworks";
+            if (myFeedType == Situation.TYPE_UNPLANNED)
+            {
+                feedName = "Incidents";
+            }
+            Log.d("MyTag", "FD COUNT " + feedName + ": in XML = " + xmlCount + ", parsed = " + parsedList.size() + ", offline = " + offline);
 
             final ArrayList<Situation> finished = parsedList;
             final boolean wasOffline = offline;
