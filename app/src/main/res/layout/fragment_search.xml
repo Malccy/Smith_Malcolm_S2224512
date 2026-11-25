@@ -27,27 +27,20 @@
 
         <Button
             android:id="@+id/searchButton"
-            android:layout_width="wrap_content"
+            android:layout_width="138dp"
             android:layout_height="wrap_content"
             android:text="Search road" />
 
         <Button
             android:id="@+id/nearButton"
-            android:layout_width="wrap_content"
+            android:layout_width="135dp"
             android:layout_height="wrap_content"
             android:text="Near GCU" />
 
         <Button
             android:id="@+id/showAllButton"
-            android:layout_width="wrap_content"
+            android:layout_width="138dp"
             android:layout_height="wrap_content"
             android:text="Show all" />
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/tvSearchInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:text="Showing all situations" />
 </LinearLayout>

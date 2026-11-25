@@ -19,9 +19,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.view.View.OnClickListener;
 
@@ -52,17 +50,21 @@ import java.util.concurrent.Executors;
 //Dialog pop-up imports
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.widget.AdapterView;
 
 //search
-import android.widget.EditText;
 import android.widget.Toast;
 
-//fragments
+//Fragments
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import androidx.lifecycle.ViewModelProvider;
+
+//Menu
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import androidx.appcompat.widget.Toolbar;
 
 public class MainActivity extends AppCompatActivity implements OnClickListener, SearchFragment.SearchFragmentListener, SituationListFragment.SituationListListener{
     private TextView tvStatus;
@@ -96,9 +98,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
     private Handler uiHandler = new Handler(Looper.getMainLooper());
     private boolean stopped = false;
 
-    private final long refreshIntervalMillis = 3600000;
+    private final long refreshIntervalMillis = 360000;
 
     private TrafficViewModel viewModel;
+    private Button mapButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -111,9 +114,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        Toolbar myToolbar = (Toolbar)findViewById(R.id.toolbar);
+        setSupportActionBar(myToolbar);
+
         tvStatus = (TextView)findViewById(R.id.tvStatus);
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
+        mapButton = (Button)findViewById(R.id.mapButton);
+        mapButton.setOnClickListener(this);
 
         searchFragment = new SearchFragment();
         listFragment = new SituationListFragment();
@@ -125,6 +134,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
 
         ViewModelProvider provider = new ViewModelProvider(this);
         viewModel = provider.get(TrafficViewModel.class);
+        updateMapButton();
 
         searchRoad = viewModel.getSearchRoad();
         searchKm = viewModel.getSearchKm();
@@ -163,11 +173,92 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         super.onDestroy();
         stopped = true;
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+        int id = item.getItemId();
+        if (id == R.id.menuRefresh)
+        {
+            startProgress();
+        }
+        else if (id == R.id.menuShowAll)
+        {
+            onShowAll();
+        }
+        else if (id == R.id.menuMap)
+        {
+            showMap();
+        }
+        else if (id == R.id.menuList)
+        {
+            showListFragment();
+        }
+        else
+        {
+            return super.onOptionsItemSelected(item);
+        }
+        return true;
+    }
+
+    private void updateMapButton()
+    {
+        if (viewModel.isMapShown())
+        {
+            mapButton.setText("Show list");
+        }
+        else
+        {
+            mapButton.setText("Show map");
+        }
+    }
+
+    private void showMap()
+    {
+        viewModel.setMapShown(true);
+        SituationMapFragment mapFragment = new SituationMapFragment();
+        mapFragment.setSituations(shownSituations);
+        FragmentManager manager = getSupportFragmentManager();
+        FragmentTransaction transaction = manager.beginTransaction();
+        transaction.replace(R.id.listHolder, mapFragment);
+        transaction.commit();
+    }
+
+    private void showListFragment()
+    {
+        viewModel.setMapShown(false);
+        listFragment = new SituationListFragment();
+        FragmentManager manager = getSupportFragmentManager();
+        FragmentTransaction transaction = manager.beginTransaction();
+        transaction.replace(R.id.listHolder, listFragment);
+        transaction.commit();
+        showList();
+    }
+
     public void onClick(View aview)
     {
         if (aview == startButton)
         {
             startProgress();
+        }
+        else if (aview == mapButton)
+        {
+            if (viewModel.isMapShown())
+            {
+                showListFragment();
+            }
+            else
+            {
+                showMap();
+            }
         }
     }
 
@@ -279,7 +370,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         }
         @Override
         public void run(){
-            Log.d("MyTask","in run");
             try {
                 URL url = new URL(myurl);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
@@ -381,6 +471,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             }
         }
         showList();
+        if (viewModel.isMapShown())
+        {
+            showMap();
+        }
+        if (!searchRoad.equals(""))
+        {
+            searchFragment.setInfo("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
+        }
+        else if (searchKm != 0)
+
         if (!searchRoad.equals(""))
         {
             searchFragment.setInfo("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");

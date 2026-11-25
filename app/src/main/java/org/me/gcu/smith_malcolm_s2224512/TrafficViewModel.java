@@ -23,6 +23,8 @@ public class TrafficViewModel extends ViewModel
     private float searchKm = 0;
     private String searchKmText = "";
 
+    private boolean mapShown = false;
+
     private final MutableLiveData<String> observedStatus;
 
     public TrafficViewModel()
@@ -89,6 +91,16 @@ public class TrafficViewModel extends ViewModel
             status = "No data: could not download it and there is no saved copy.";
         }
         observedStatus.setValue(status);
+    }
+
+    public boolean isMapShown()
+    {
+        return mapShown;
+    }
+
+    public void setMapShown(boolean value)
+    {
+        mapShown = value;
     }
 
     public ArrayList<Situation> getAllSituations()
