@@ -480,12 +480,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             searchFragment.setInfo("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
         }
         else if (searchKm != 0)
-
-        if (!searchRoad.equals(""))
-        {
-            searchFragment.setInfo("Road " + searchRoad + ": " + String.valueOf(shownSituations.size()) + " found");
-        }
-        else if (searchKm != 0)
         {
             searchFragment.setInfo("Within " + String.valueOf(searchKm) + " km of GCU: " + String.valueOf(shownSituations.size()) + " found");
         }
@@ -813,7 +807,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                         insideASituation = true;
                         aSituation = new Situation();
                         aSituation.setFeedType(feedType);
-                        Log.d("MyTag","New Situation found!");
                     }
                     else if (insideASituation)
                     {
@@ -821,7 +814,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                         {
                             if (xpp.getAttributeCount() > 0) { aSituation.setRecordType(xpp.getAttributeValue(0)); }
                             if (xpp.getAttributeCount() > 1) { aSituation.setSituationId(xpp.getAttributeValue(1)); }
-                            Log.d("MyTag","Record id is " + aSituation.getSituationId());
                         }
                         else if (xpp.getName().equalsIgnoreCase("situationRecordCreationTime"))
                         {
@@ -842,19 +834,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                         {
                             String temp = xpp.nextText();
                             aSituation.setStartTime(temp);
-                            Log.d("MyTag","Start time is " + temp);
                         }
                         else if (xpp.getName().equalsIgnoreCase("overallEndTime"))
                         {
                             String temp = xpp.nextText();
                             aSituation.setEndTime(temp);
-                            Log.d("MyTag","End time is " + temp);
                         }
                         else if (xpp.getName().equalsIgnoreCase("delaysType"))
                         {
                             String temp = xpp.nextText();
                             aSituation.setDelaysType(temp);
-                            Log.d("MyTag","Delays type is " + temp);
                         }
                         else if (xpp.getName().equalsIgnoreCase("numberOfOperationalLanes"))
                         {
@@ -920,7 +909,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                         {
                             String temp = xpp.nextText();
                             aSituation.setComment(temp);
-                            Log.d("MyTag","Comment is " + temp);
                         }
                         else if (xpp.getName().equalsIgnoreCase("value") && inLocName)
                         {
@@ -944,7 +932,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                         inFrom = false;
                         inTo = false;
                         inLocName = false;
-                        Log.d("MyTag","Situation parsing completed! " + aSituation.toString());
                     }
                     else if (insideASituation)
                     {

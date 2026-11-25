@@ -43,4 +43,11 @@
             android:layout_height="wrap_content"
             android:text="Show all" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvSearchInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Showing all situations"
+        android:textSize="16sp" />
 </LinearLayout>

@@ -31,6 +31,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
+    <FrameLayout
+        android:id="@+id/listHolder"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+
+    </FrameLayout>
+
     <Button
         android:id="@+id/mapButton"
         android:layout_width="match_parent"
@@ -38,22 +46,10 @@
         android:text="Show map" />
 
     <TextView
-        android:id="@+id/tvSearchInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:text="Showing all situations" />
-
-    <FrameLayout
-        android:id="@+id/listHolder"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <TextView
         android:id="@+id/acknowledgement"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="16sp"
         android:text="Contains Traffic Scotland data" />
+
 </LinearLayout>
