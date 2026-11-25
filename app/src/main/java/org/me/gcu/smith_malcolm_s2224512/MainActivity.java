@@ -230,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         FragmentTransaction transaction = manager.beginTransaction();
         transaction.replace(R.id.listHolder, mapFragment);
         transaction.commit();
+        updateMapButton();
     }
 
     private void showListFragment()
@@ -240,6 +241,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         FragmentTransaction transaction = manager.beginTransaction();
         transaction.replace(R.id.listHolder, listFragment);
         transaction.commit();
+        updateMapButton();
         showList();
     }
 
@@ -957,7 +959,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
             Log.e("MyTag","IO error during parsing");
         }
 
-        Log.d("MyTag","End of document reached");
+        Log.d("MyTag","Data parsing complete");
     }
 
     private void storeLocationName(Situation s, boolean isFrom, String element, String type, String value)

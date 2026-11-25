@@ -66,11 +66,7 @@ public class SituationMapFragment extends SupportMapFragment implements OnMapRea
             }
         }
 
-        if (first == null)
-        {
-            first = new LatLng(55.8673, -4.2504);
-        }
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(first, 9f));
+        LatLng gcu = new LatLng(55.8673, -4.2504);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(gcu, 9f));
     }
 }
